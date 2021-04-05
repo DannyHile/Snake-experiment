@@ -1,28 +1,4 @@
-<!DOCTYPE html>
-<html>
-<head>
-<meta charset="UTF-8" />
-<title>Snake experiment</title>
-<style>
-    body{background-color:black;}
-    canvas{
-        image-rendering: pixelated;
-        display: block;
-        margin:0 auto;
-        max-width:100%
-    }
-</style>
-</head>
-<body>
-<script>
-let myFont = new FontFace(
-  "VT323",
-  "url(https://fonts.gstatic.com/s/vt323/v12/pxiKyp0ihIEF2isfFJU.woff2)"
-);
 
-myFont.load().then((font) => {
-  document.fonts.add(font);
-});
 
 const rgb = (r, g, b, a)=>`rgba(${r||0},${g||0},${b||0},${a||1}`
 const pi = Math.PI;
@@ -31,15 +7,14 @@ const sin = Math.sin;
 const cos = Math.cos;
 const abs = Math.abs;
 const rnd = a =>Math.random()*a;
-let hiscore = localStorage.cyberwurmHiScore||0;
+const lerp = (start, stop, amt) =>amt*(stop-start)+start;
+const clamp = (val, min, max) =>Math.min(Math.max(val, min), max);
 const map = (n, s1, e1, s2, e2, b)=>{
   const newval = (n-s1)/(e1-s1)*(e2-s2)+s2;
   if (!b) return newval;
   if (s2 < e2) return this.constrain(newval, s2, e2);
   return this.constrain(newval, e2, s2);
 };
-const lerp = (start, stop, amt) =>amt*(stop-start)+start;
-const clamp = (val, min, max) =>Math.min(Math.max(val, min), max);
 
 function Particle(x,y, angle=rnd(tau),speed=rnd(3)+3){
    this.x=x;this.y=y;this.l=0;this.angle=angle;this.speed=speed;
@@ -55,9 +30,24 @@ function Particle(x,y, angle=rnd(tau),speed=rnd(3)+3){
 
 
 (function(ctx,w,h){
+  let myFont = new FontFace(
+    "VT323",
+    "url(https://fonts.gstatic.com/s/vt323/v12/pxiKyp0ihIEF2isfFJU.woff2)"
+  );
+
+  myFont.load().then((font) => {
+    document.fonts.add(font);
+  });
+  
+  let hiscore = localStorage.cyberwurmHiScore||0;
   ctx.canvas.width=w;
   ctx.canvas.height=h;
   document.body.appendChild(ctx.canvas);
+  const fillCol=(r,g,b,a)=>ctx.fillStyle=rgb(r,g,b,a)
+  const strokeCol=(r,g,b,a)=>ctx.strokeStyle=rgb(r,g,b,a)
+  const fillHsl=(h,s,l)=>ctx.fillStyle=`hsl(${h||0},${clamp(s??100,0,100)}%,${l||50}%)`
+
+
   let wurm = resetWurm();
   const particles =[];
   let lastT = 0;
@@ -81,7 +71,7 @@ function Particle(x,y, angle=rnd(tau),speed=rnd(3)+3){
     //Render game
     drawGame(t);
 
-
+    //Handle particles
     particles.forEach((p,i)=>{
       ctx.fillStyle=rgb(255/p.l*4,255/p.l*2,255/p.l/2);
       ctx.fillRect(p.x-4,p.y-4,8-p.l/5,8-p.l/5);
@@ -100,9 +90,6 @@ function Particle(x,y, angle=rnd(tau),speed=rnd(3)+3){
 
   function drawGame(t){
       wurm.frame++;
-      const fillCol=(r,g,b,a)=>ctx.fillStyle=rgb(r,g,b,a)
-      const strokeCol=(r,g,b,a)=>ctx.strokeStyle=rgb(r,g,b,a)
-      const fillHsl=(h,s,l)=>ctx.fillStyle=`hsl(${h||0},${clamp(s??100,0,100)}%,${l||50}%)`
       //Clear canvas
       fillCol(0,0,0);
       ctx.fillRect(0,0,w,h);
@@ -116,7 +103,7 @@ function Particle(x,y, angle=rnd(tau),speed=rnd(3)+3){
       ctx.textAlign='left';
       ctx.font='bold 1cm VT323,arial';
       ctx.fillText(`SCORE ${wurm.points>>0}      HISCORE ${hiscore}`,2,30);
-      //Render bonus
+      //Render bonus and gauge
       if(!wurm.gameover){
           fillCol(255,255,255);
           ctx.fillRect(0,34,512,15);
@@ -134,27 +121,28 @@ function Particle(x,y, angle=rnd(tau),speed=rnd(3)+3){
           ctx.font='.4cm VT323,arail';
           ctx.fillText(`Bonus: ${bonus.toFixed(2)}    Speed: ${(wurm.len*5)}`, 6, 45);
       }
-      //Render playfield
+      //Render playfield (arena)
       wurm.arena.forEach((p,i)=>{
         if(p||wurm.gameover){
           let x=(i%32);
           let y=(i>>5);
           if(bonus<0){
             //Hurry up inferno pattern
-            let r=i/2+sin(x/3)*cos(y/6+t/333+sin(x/6-t/999))*255;
+            //Bonus is also below zero on gameover
+            const r=i/2+sin(x/3)*cos(y/6+t/333+sin(x/6-t/999))*255;
             fillCol(r,r*.7);
           }
           else{
-              //fillCol(o=99*sin(y/5-cos(x/5)+t/200),-o); 
-              //fillCol(o=sin((Math.hypot(x-16,y-14)/10+t/1000)*5)*99,o,-o)
-              //fillCol(o=560*sin(cos(t/1000-x/9)-t/1000-y/9+sin(x/(6.+cos(t*.001)+sin(x/9+y/9)))),o,o)
-              //fillCol(o=100*(cos(t/2000-x/4)+sin(t/1000+x/9+sin(y/(4+sin(t/4000)-sin(x/y))))),o*sin(y-t/500+sin(x+t/1000)),-o);
-              //fillCol(o=99*(sin(x*y+y/2*y/9*(sin(t/9000)))/222**cos(y/9*sin(t/1000)+x/11*cos(t/1000))),o/9)
-              //fillCol(o=99*(sin((x*y+x*y)/1024)+cos(y+t/999)+sin(t/666+x+sin(y+t/999))),o/2,-o)
-              
-              //Rainbow pattern
-  //            fillHsl(i/3+(sin(x/16)*cos(y/9+t/666-cos(x/9+t/999))*9)*5,clamp((wurm.len-4)*4,0,100),50);
-              fillHsl(i/3+(sin(x/16)*cos(y/9+t/666-cos(x/9+t/999))*9)*5,40);
+            //Rainbow pattern
+            fillHsl(i/3+(sin(x/16)*cos(y/9+t/666-cos(x/9+t/999))*9)*5,40);
+            //fillHsl(i/3+(sin(x/16)*cos(y/9+t/666-cos(x/9+t/999))*9)*5,clamp((wurm.len-4)*4,0,100),50);
+            //fillCol(o=99*sin(y/5-cos(x/5)+t/200),-o); 
+            //fillCol(o=sin((Math.hypot(x-16,y-14)/10+t/1000)*5)*99,o,-o)
+            //fillCol(o=560*sin(cos(t/1000-x/9)-t/1000-y/9+sin(x/(6.+cos(t*.001)+sin(x/9+y/9)))),o,o)
+            //fillCol(o=100*(cos(t/2000-x/4)+sin(t/1000+x/9+sin(y/(4+sin(t/4000)-sin(x/y))))),o*sin(y-t/500+sin(x+t/1000)),-o);
+            //fillCol(o=99*(sin(x*y+y/2*y/9*(sin(t/9000)))/222**cos(y/9*sin(t/1000)+x/11*cos(t/1000))),o/9)
+            //fillCol(o=99*(sin((x*y+x*y)/1024)+cos(y+t/999)+sin(t/666+x+sin(y+t/999))),o/2,-o)
+            
           }
           ctx.fillRect(wurm.ofx+(i%32)*wurm.tz,wurm.ofy+(i>>5)*wurm.tz,wurm.tz-1,wurm.tz-1);
         }
@@ -269,6 +257,3 @@ function Particle(x,y, angle=rnd(tau),speed=rnd(3)+3){
 }
 
 })(document.createElement('canvas').getContext('2d'),512,562)
-</script>
-</body>
-</html>
