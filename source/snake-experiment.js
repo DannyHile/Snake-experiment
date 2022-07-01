@@ -77,7 +77,8 @@ function Particle(x,y, angle=rnd(tau),speed=rnd(3)+3){
       ctx.fillRect(p.x-4,p.y-4,8-p.l/5,8-p.l/5);
       if(p.l>50||p.x<0||p.y<0||p.x>w||p.y>h){
         particles.splice(i,1);
-      }else{
+      }
+      else{
         p.update();
       }
     });
